@@ -19,7 +19,7 @@ const AddTaskPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
-  const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
+  const [userRole, setUserRole] = useState(localStorage.getItem('role')?.trim());
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [currentTaskId, setCurrentTaskId] = useState(null);
@@ -33,14 +33,12 @@ const AddTaskPage = () => {
       toast.error("User ID is missing. Please log in again.");
       return;
     }
-    const cleanedUserRole = userRole.trim(); // This will remove any leading or trailing spaces
+    const cleanedUserRole = userRole.replace(/[^\w\s]/g, '').trim().toLowerCase();
 
-    console.log('Cleaned User role:', cleanedUserRole); // Check the cleaned value
-    console.log('Is user role admin?', cleanedUserRole === 'admin');
+
     try {
-      console.log('User role:', userRole); // Ensure the value is exactly 'admin'
-  console.log('Is user role admin?', userRole === 'admin');
-       const url = userRole.trim() === 'admin'
+
+      const url = cleanedUserRole === 'admin'
         ? 'http://localhost:5000/api/tasks/get'
         : `http://localhost:5000/api/tasks/assigned/${userId}`;
 
@@ -71,7 +69,21 @@ const AddTaskPage = () => {
       setFormData({ title: "", description: "", assignedTo: "", dueDate: "", status: "" });
       setErrors({});
     }
-    if (modalType === 'edit') setErrors({});
+    if (modalType === 'edit') {
+      alert('Editing task');
+      setErrors({});
+
+      // Ensure tasks is the correct object or extract it correctly
+      if (tasks && typeof tasks === 'object' && !Array.isArray(tasks)) {
+        setFormData({
+          title: tasks.title || "",
+          description: tasks.description || "",
+          assignedTo: tasks.assignedTo || "",
+          dueDate: tasks.dueDate || "",
+          status: tasks.status || "",
+        });
+      }
+    }
     modalType === 'add' ? setIsAddModalOpen(!isAddModalOpen) : setIsEditModalOpen(!isEditModalOpen);
   };
 
@@ -173,7 +185,7 @@ const AddTaskPage = () => {
                 <td>
                   {userRole === "admin" ? (
                     <>
-                      <IoMdCreate title="Edit Task" style={{ marginRight: '10px', cursor: 'pointer' }} onClick={() => { setEditIndex(index); setFormData(task); toggleModal('edit'); }} />
+                      <IoMdCreate title="Edit Task" style={{ marginRight: '10px', cursor: 'pointer' }} onClick={() => { setEditIndex(index); setFormData(task); toggleModal('edit', task); }} />
                       <IoMdTrash title="Delete Task" style={{ cursor: 'pointer' }} onClick={() => handleDelete(index)} />
                     </>
                   ) : (
@@ -207,15 +219,31 @@ const AddTaskPage = () => {
                     <option value="pending">Pending</option>
                     <option value="completed">Completed</option>
                   </select>
-                ) : (
-                  <Input
-                    type={field === 'dueDate' ? 'date' : 'text'}
+                ) : field === 'assignedTo' ? (
+                  <select
                     name={field}
                     value={formData[field]}
                     onChange={handleChange}
-                    invalid={!!errors[field]}
-                  />
-                )}
+                    className={`form-control ${errors[field] ? 'is-invalid' : ''}`}
+                  >
+                    <option value="">Select Employee</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.name}>
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+                )
+
+                  : (
+                    <Input
+                      type={field === 'dueDate' ? 'date' : 'text'}
+                      name={field}
+                      value={formData[field]}
+                      onChange={handleChange}
+                      invalid={!!errors[field]}
+                    />
+                  )}
                 {errors[field] && <div className="text-danger">{errors[field]}</div>}
               </div>
             ))}
@@ -246,15 +274,32 @@ const AddTaskPage = () => {
                     <option value="pending">Pending</option>
                     <option value="completed">Completed</option>
                   </select>
-                ) : (
-                  <Input
-                    type={field === 'dueDate' ? 'date' : 'text'}
+                ) : field === 'assignedTo' ? (
+                  <select
                     name={field}
-                    value={formData[field]}
+                    value={formData.assignedTo || ""} // Ensure a fallback for undefined/null
                     onChange={handleChange}
-                    invalid={!!errors[field]}
-                  />
-                )}
+                    className={`form-control ${errors[field] ? 'is-invalid' : ''}`}
+                  >
+                    <option value="">Select Employee</option>
+                    {employees.map((employee) => (
+                      <option key={employee.id} value={employee.id}> {/* Use employee.id as value */}
+                        {employee.name}
+                      </option>
+                    ))}
+                  </select>
+
+                )
+
+                  : (
+                    <Input
+                      type={field === 'dueDate' ? 'date' : 'text'}
+                      name={field}
+                      value={formData[field]}
+                      onChange={handleChange}
+                      invalid={!!errors[field]}
+                    />
+                  )}
                 {errors[field] && <div className="text-danger">{errors[field]}</div>}
               </div>
             ))}
