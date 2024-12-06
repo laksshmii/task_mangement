@@ -255,7 +255,7 @@ const AddTaskPage = () => {
       <Modal isOpen={isStatusModalOpen} toggle={() => setIsStatusModalOpen(false)}>
         <ModalHeader toggle={() => setIsStatusModalOpen(false)}>Update Task Status</ModalHeader>
         <ModalBody>
-          <select onChange={(e) => setSelectedStatus(e.target.value)} value={selectedStatus}>
+          <select  className="form-select" onChange={(e) => setSelectedStatus(e.target.value)} value={selectedStatus}>
             <option value="">Select Status</option>
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>

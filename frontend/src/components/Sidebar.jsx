@@ -1,4 +1,4 @@
-import  { useState,React,useEffect } from 'react';
+import { useState, React, useEffect } from 'react';
 import { Sidebar, Menu, MenuItem } from 'react-pro-sidebar';
 import { FaHome, FaUserPlus, FaTasks } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -11,16 +11,16 @@ const SidebarComponent = () => {
         if (user) {
             setUserRole(user?.role || "");
         }
-    }, []); 
-return (
+    }, []);
+    return (
         <Sidebar
-        style={{
-            backgroundColor: "rgba(255, 255, 255, 0.5)"
-          }}
-          
+            style={{
+                backgroundColor: "rgba(255, 255, 255, 0.5)"
+            }}
+
         >
             <Menu
-               
+
             >
                 <MenuItem
                     icon={<FaHome />}
@@ -30,12 +30,12 @@ return (
                 </MenuItem>
                 {userRole === "admin" && (
                     <>
-                <MenuItem
-                    icon={<FaUserPlus />}
-                    component={<Link to="/addemployee" />}
-                >
-                    Add Employee
-                </MenuItem>
+                        <MenuItem
+                            icon={<FaUserPlus />}
+                            component={<Link to="/addemployee" />}
+                        >
+                            Add Employee
+                        </MenuItem>
                     </>
                 )}
                 <MenuItem
