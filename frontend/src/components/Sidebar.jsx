@@ -36,13 +36,19 @@ const SidebarComponent = () => {
                         >
                             Add Employee
                         </MenuItem>
+                        <MenuItem
+                    icon={<FaTasks />}
+                    component={<Link to="/addtask" />}
+                >
+                    Add Task
+                </MenuItem>
                     </>
                 )}
                 <MenuItem
                     icon={<FaTasks />}
                     component={<Link to="/addtask" />}
                 >
-                    Add Task
+                    View Task
                 </MenuItem>
             </Menu>
         </Sidebar>
