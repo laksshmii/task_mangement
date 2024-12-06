@@ -20,16 +20,16 @@ function HomePage() {
                 >
                     <Container className="text-center">
                         <TypingAnimation
-                            head="Task Management App"
+                            head="Task Management"
                             sub="Stay organized and productive."
                             textArray={[
-                                'Welcome to Task Management App!',
+                                'Welcome to Task Management!',
                                 'Manage your tasks efficiently.',
                                 'Get Started Today!',
                             ]}
                         />
                         <Button color="primary" className="mt-4" onClick={handleGetStartedClick}>
-                          Login
+                            Login
                         </Button>
                     </Container>
                 </div>

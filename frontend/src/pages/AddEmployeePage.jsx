@@ -1,73 +1,132 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Table,
-  Button,
-  Form,
-  FormGroup,
-  Label,
-  Input,
-  Container,
-  Row,
-  Col,
+  Modal, ModalHeader, ModalBody, ModalFooter,
+  Table, Button, Form, FormGroup, Label, Input
 } from "reactstrap";
-import TitleComponent from "../components/TitleComponent";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const AddEmployeePage = () => {
   const [employees, setEmployees] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    role: "",
     password: "",
-    department: "",
   });
+  const [errors, setErrors] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editIndex, setEditIndex] = useState(null);
 
-  const toggleModal = () => setIsModalOpen(!isModalOpen);
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get("http://localhost:5000/api/employees/getEmployee");
+      setEmployees(response.data || []);
+    } catch (error) {
+      console.error("Error fetching employees:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
+
+  const toggleModal = () => {
+    setErrors({});
+    setIsModalOpen(!isModalOpen);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setErrors({ ...errors, [e.target.name]: "" });
   };
 
-  const handleSubmit = (e) => {
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = "Name is required.";
+    if (!formData.email.trim()) newErrors.email = "Email is required.";
+    if (!isEditing && !formData.password.trim()) newErrors.password = "Password is required.";
+    if (!formData.role.trim()) newErrors.role = "Role is required.";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.password || !formData.department) {
-      alert("Please fill out all fields.");
-      return;
+    if (!validateForm()) return;
+
+    const payload = { ...formData };
+    if (isEditing) delete payload.password;
+
+    try {
+      const url = isEditing
+        ? `http://localhost:5000/api/employees/updateEmployee/${employees[editIndex].id}`
+        : "http://localhost:5000/api/employees/addEmployee";
+      const method = isEditing ? "put" : "post";
+      const response = await axios[method](url, payload);
+
+      if (response.status === 200 || response.status === 201) {
+        toggleModal();
+        toast.success(isEditing ? "Employee updated successfully!" : "Employee added successfully!", {
+          position: "top-right",
+          autoClose: 6000,
+        })
+        fetchEmployees();
+      }
+    } catch (error) {
+      console.error(`Error ${isEditing ? "updating" : "adding"} employee:`, error);
     }
-    setEmployees([...employees, formData]);
-    setFormData({ name: "", email: "", password: "", department: "" });
-    toggleModal();
-    alert("Employee added successfully!");
   };
 
-  const handleDelete = (index) => {
-    const updatedEmployees = employees.filter((_, i) => i !== index);
-    setEmployees(updatedEmployees);
+  const handleEdit = (index, employee) => {
+    setFormData({
+      name: employee.name,
+      email: employee.email,
+      role: employee.role,
+    });
+    setEditIndex(index);
+    setIsEditing(true);
+    toggleModal();
+  };
+
+  const handleDelete = async (index) => {
+    try {
+      const employeeToDelete = employees[index];
+      await axios.delete(`http://localhost:5000/api/employees/deleteEmployee/${employeeToDelete.id}`);
+      toast.success("Employee deleted successfully!", {
+        position: "top-right",
+        autoClose: 6000
+      })
+      fetchEmployees();
+    } catch (error) {
+      console.error("Error deleting employee:", error);
+    }
   };
 
   return (
-    <Container className="mt-5">
-      <Row className="mb-4 align-items-center">
-        <Col xs={6}>
-          <TitleComponent title="Employee Management" />
-        </Col>
-        <Col xs={6} className="text-end">
-          <Button color="primary" onClick={toggleModal}>
-            Add Employee
-          </Button>
-        </Col>
-      </Row>
-      <Table bordered responsive striped>
+    <div className="container mt-5">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h1>Employee Management</h1>
+        <Button
+          color="primary"
+          onClick={() => {
+            setIsEditing(false);
+            setFormData({ name: "", email: "", role: "", password: "" });
+            toggleModal();
+          }}
+        >
+          Add Employee
+        </Button>
+      </div>
+      <Table striped>
         <thead>
           <tr>
             <th>#</th>
             <th>Name</th>
             <th>Email</th>
-            <th>Department</th>
+            <th>Role</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -78,9 +137,21 @@ const AddEmployeePage = () => {
                 <th scope="row">{index + 1}</th>
                 <td>{employee.name}</td>
                 <td>{employee.email}</td>
-                <td>{employee.department}</td>
+                <td>{employee.role}</td>
                 <td>
-                  <Button color="danger" size="sm" onClick={() => handleDelete(index)}>
+                  <Button
+                    color="warning"
+                    size="sm"
+                    className="me-2"
+                    onClick={() => handleEdit(index, employee)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    color="danger"
+                    size="sm"
+                    onClick={() => handleDelete(index)}
+                  >
                     Delete
                   </Button>
                 </td>
@@ -89,73 +160,61 @@ const AddEmployeePage = () => {
           ) : (
             <tr>
               <td colSpan="5" className="text-center">
-                No employees added yet.
+                No employees found.
               </td>
             </tr>
           )}
         </tbody>
       </Table>
 
+      {/* Modal for Add/Edit Employee */}
       <Modal isOpen={isModalOpen} toggle={toggleModal}>
-        <ModalHeader toggle={toggleModal}>Add Employee</ModalHeader>
+        <ModalHeader toggle={toggleModal}>
+          {isEditing ? "Edit Employee" : "Add Employee"}
+        </ModalHeader>
         <ModalBody>
           <Form>
-            <FormGroup>
-              <Label for="name">Name</Label>
-              <Input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Enter employee name"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label for="email">Email</Label>
-              <Input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="Enter employee email"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label for="password">Password</Label>
-              <Input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Enter employee password"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label for="department">Department</Label>
-              <Input
-                type="text"
-                id="department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                placeholder="Enter employee department"
-              />
-            </FormGroup>
+            {["name", "email", ...(isEditing ? [] : ["password"]), "role"].map((field) => (
+              <FormGroup key={field}>
+                <Label for={field}>{field.charAt(0).toUpperCase() + field.slice(1)}</Label>
+                {field === "role" ? (
+                  <Input
+                    type="select"
+                    name={field}
+                    id={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    invalid={!!errors[field]}
+                  >
+                    <option value="">Select Role</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Employee">Employee</option>
+                  </Input>
+                ) : (
+                  <Input
+                    type={field === "password" ? "password" : "text"}
+                    name={field}
+                    id={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    invalid={!!errors[field]}
+                  />
+                )}
+                {errors[field] && <div className="text-danger">{errors[field]}</div>}
+              </FormGroup>
+            ))}
           </Form>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={handleSubmit}>
-            Add
-          </Button>
           <Button color="secondary" onClick={toggleModal}>
             Cancel
           </Button>
+          <Button color="primary" onClick={handleSubmit}>
+            {isEditing ? "Save Changes" : "Add"}
+          </Button>
         </ModalFooter>
       </Modal>
-    </Container>
+    </div>
   );
 };
 

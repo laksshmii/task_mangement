@@ -22,9 +22,17 @@ const Task = sequelize.define('Task', {
     type: DataTypes.ENUM('Pending', 'Completed'),
     defaultValue: 'Pending',
   },
+  assignedTo: {
+    type: DataTypes.INTEGER,  // This stores the employee's ID
+    allowNull: true,
+  },
 });
 
 Task.belongsTo(User, { foreignKey: 'userId' });
 User.hasMany(Task, { foreignKey: 'userId' });
+
+// Adding the association for assignedTo (linking to User/Employee)
+Task.belongsTo(User, { foreignKey: 'assignedTo', as: 'assignee' });
+User.hasMany(Task, { foreignKey: 'assignedTo', as: 'assignedTasks' });
 
 module.exports = Task;

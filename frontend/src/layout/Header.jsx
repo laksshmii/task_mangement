@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 
 const AppNavbar = ({ isAuthenticated, toggleNavbar, isOpen }) => {
   const navigate = useNavigate();
-  
+
   return (
     <Navbar color="light" light expand="md">
-      <NavbarBrand href="/">Task Management App</NavbarBrand>
+      <NavbarBrand href="/">Task Management </NavbarBrand>
       <NavbarToggler onClick={toggleNavbar} />
       <Collapse isOpen={isOpen} navbar>
         <Nav className="ms-auto" navbar>
@@ -16,7 +16,7 @@ const AppNavbar = ({ isAuthenticated, toggleNavbar, isOpen }) => {
               <NavItem>
                 <NavLink href="/login">Login</NavLink>
               </NavItem>
-             
+
             </>
           ) : (
             <>

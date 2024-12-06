@@ -80,10 +80,9 @@ exports.getEmployee = async (req, res) => {
   }
 };
 exports.deleteEmployee = async (req, res) => {
-  const { email } = req.params;
-
+  const { id } = req.params;
   try {
-    const employee = await Employee.findOne({ where: { email } });
+    const employee = await Employee.findOne({ where: { id } });
 
     if (!employee) {
       return res.status(404).json({ error: 'Employee not found' });
@@ -97,28 +96,32 @@ exports.deleteEmployee = async (req, res) => {
     res.status(500).json({ error: 'Error deleting employee' });
   }
 };
-
 exports.updateEmployee = async (req, res) => {
-  const { email, name, role, password } = req.body;
+  const { id } = req.params; // Extract `id` from request parameters
+  const { name, email, role } = req.body; // Extract other fields from request body
 
   try {
-    const employee = await Employee.findOne({ where: { email } });
+    // Find the employee by ID
+    const employee = await Employee.findOne({ where: { id } });
 
     if (!employee) {
+      // If the employee does not exist, send a 404 response
       return res.status(404).json({ error: 'Employee not found' });
     }
 
-    if (password) {
-      employee.password = await bcrypt.hash(password, 10);
-    }
-    employee.name = name || employee.name;
-    employee.role = role || employee.role;
+    // Update fields if provided, otherwise retain existing values
+    employee.name = name ?? employee.name;
+    employee.email = email ?? employee.email;
+    employee.role = role ?? employee.role;
 
+    // Save changes to the database
     await employee.save();
 
+    // Respond with a success message and updated employee data
     res.json({
       message: 'Employee updated successfully',
       employee: {
+        id: employee.id,
         name: employee.name,
         email: employee.email,
         role: employee.role,
@@ -126,7 +129,9 @@ exports.updateEmployee = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating employee:', error);
+    // Handle unexpected errors
     res.status(500).json({ error: 'Error updating employee' });
   }
 };
+
 

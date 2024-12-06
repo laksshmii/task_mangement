@@ -5,41 +5,41 @@ import { Link } from 'react-router-dom';
 
 const SidebarComponent = () => {
     return (
-        <Sidebar 
-            style={{
-                height: '100vh',
-                backgroundColor: '#2d4059', // Ensures the sidebar spans the full height of the viewport
-            }}
+        <Sidebar
+        style={{
+            backgroundColor: "rgba(255, 255, 255, 0.5)"
+          }}
+          
         >
-            <Menu 
+            <Menu
                 menuItemStyles={{
-                    button: {
-                        [`&.active`]: {
-                            backgroundColor: '#13395e', // Highlight color for active links
-                            color: '#b6c8d9',
-                        },
-                        color: '#ffffff', // Default text color
-                        '&:hover': {
-                            backgroundColor: '#2d4059', // Hover effect
-                            color: '#b6c8d9',
-                        },
-                    },
+                    // button: {
+                    //     [`&.active`]: {
+                    //         backgroundColor: '#13395e', // Highlight color for active links
+                    //         color: '#b6c8d9',
+                    //     },
+                    //     color: '#ffffff', // Default text color
+                    //     '&:hover': {
+                    //         backgroundColor: '#2d4059', // Hover effect
+                    //         color: '#b6c8d9',
+                    //     },
+                    // },
                 }}
             >
-                <MenuItem 
-                    icon={<FaHome />} 
+                <MenuItem
+                    icon={<FaHome />}
                     component={<Link to="/dashboard" />}
                 >
                     Dashboard
                 </MenuItem>
-                <MenuItem 
-                    icon={<FaUserPlus />} 
+                <MenuItem
+                    icon={<FaUserPlus />}
                     component={<Link to="/addemployee" />}
                 >
                     Add Employee
                 </MenuItem>
-                <MenuItem 
-                    icon={<FaTasks />} 
+                <MenuItem
+                    icon={<FaTasks />}
                     component={<Link to="/addtask" />}
                 >
                     Add Task

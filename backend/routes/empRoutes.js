@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { addEmployee,getEmployee } = require('../controllers/employeeController');
+const { addEmployee, getEmployee, updateEmployee, deleteEmployee } = require('../controllers/employeeController');
 
 
 const router = express.Router();
@@ -18,4 +18,14 @@ router.post(
 );
 router.get('/getEmployee', getEmployee);
 
+router.put(
+  '/updateEmployee/:id',
+  [
+    body('name').optional().notEmpty().withMessage('Name cannot be empty'),
+    body('email').optional().isEmail().withMessage('Valid email is required'),
+    body('role').optional().notEmpty().withMessage('Role cannot be empty'),
+  ],
+  updateEmployee
+);
+router.delete('/deleteEmployee/:id', deleteEmployee);
 module.exports = router;

@@ -15,13 +15,15 @@ import {
   Collapse,
   Button,
 } from "reactstrap";
-import "bootstrap/dist/css/bootstrap.min.css";
+// import "bootstrap/dist/css/bootstrap.min.css";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/AddEmployeePage";
+import AddEmployeePage from "./pages/AddEmployeePage";
+import AddTaskPage from "./pages/Addtask";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
-
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 function App() {
   const [isOpen, setIsOpen] = useState(false); // Navbar toggle
   const [sidebarToggled, setSidebarToggled] = useState(true); // Sidebar collapse/expand state
@@ -41,6 +43,8 @@ function App() {
 
   return (
     <Router>
+      <ToastContainer />
+
       <div className="App" style={{ display: "flex", height: "100vh" }}>
         {/* Only show Sidebar after login */}
         {isAuthenticated && (
@@ -56,7 +60,7 @@ function App() {
           {/* Navbar is always visible */}
           {isAuthenticated ? (
             <Navbar color="light" light expand="md" className="">
-              <NavbarBrand href="/">Task Management App</NavbarBrand>
+              <NavbarBrand href="/">Task Management </NavbarBrand>
               <NavbarToggler onClick={toggleNavbar} />
               <Collapse isOpen={isOpen} navbar>
                 <Nav className="ms-auto" navbar>
@@ -112,7 +116,8 @@ function App() {
                 path="/login"
                 element={<LoginPage setIsAuthenticated={setIsAuthenticated} />}
               />
-              <Route path="/addemployee" element={<RegisterPage />} />
+              <Route path="/addemployee" element={<AddEmployeePage />} />
+              <Route path="/addTask" element={<AddTaskPage />} />
             </Routes>
           </div>
         </div>

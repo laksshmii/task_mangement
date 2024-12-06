@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Form, FormGroup, Label, Input, FormFeedback, Card, CardBody, CardTitle, CardFooter } from 'reactstrap';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const LoginPage = () => {
   const [credentials, setCredentials] = useState({ email: '', password: '' });
@@ -55,15 +56,23 @@ const LoginPage = () => {
         console.log(response);
         // Check if login is successful (adjust based on API response)
         if (response.data.message === "Login successful") {
-          alert('Login successful!');
+          toast.success('Login successful!', {
+            position: "top-right",
+            autoClose: 6000,
+          });
           localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('token', response.data.token);
           window.location.href = '/dashboard'; // Redirect after successful login
         } else {
-          alert('Invalid credentials');
+          toast.error('Login failed. Please check your credentials.', {
+            position: "top-right",
+            autoClose: 6000,
+
+          })
+          alert('sdf')
         }
       } catch (error) {
         console.error('Error during login:', error);
-        alert('An error occurred. Please try again later.');
       } finally {
         setLoading(false);
       }

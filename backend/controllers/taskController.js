@@ -1,125 +1,78 @@
 const Task = require('../models/Task');
-
-exports.getTasks = async (req, res) => {
-    try {
-        const tasks = await Task.findAll({ where: { userId: req.user.id } });
-        res.json(tasks);
-    } catch (error) {
-        res.status(500).json({ error: 'Error fetching tasks' });
-    }
-};
+const Employee = require('../models/Employee');  // Assuming you have an Employee model
 
 exports.createTask = async (req, res) => {
-    const { title, description, dueDate, status } = req.body;
+  const { title, description, dueDate, status, assignedTo } = req.body;
 
-    try {
-        const task = await Task.create({
-            title,
-            description,
-            dueDate,
-            status,
-            userId: req.user.id,
-        });
-        res.status(201).json({ message: 'Task created successfully', task });
-    } catch (error) {
-        res.status(500).json({ error: 'Error creating task' });
+  try {
+    // Ensure the assigned employee exists
+    const employee = await Employee.findByPk(assignedTo);
+    if (!employee) {
+      return res.status(400).json({ error: 'Assigned employee not found' });
     }
+
+    const task = await Task.create({
+      title,
+      description,
+      dueDate,
+      status,
+      assignedTo,  // Store the assigned employee's ID
+      userId: req.user.id,
+    });
+
+    res.status(201).json({ message: 'Task created successfully', task });
+  } catch (error) {
+    res.status(500).json({ error: 'Error creating task' });
+  }
 };
 
 exports.updateTask = async (req, res) => {
-    const { id } = req.params;
-    const { title, description, dueDate, status } = req.body;
-
-    try {
-        const task = await Task.findByPk(id);
-        if (!task || task.userId !== req.user.id) {
-            return res.status(404).json({ error: 'Task not found' });
-        }
-
-        task.title = title;
-        task.description = description;
-        task.dueDate = dueDate;
-        task.status = status;
-        await task.save();
-
-        res.json({ message: 'Task updated successfully', task });
-    } catch (error) {
-        res.status(500).json({ error: 'Error updating task' });
-    }
-};
-
-exports.deleteTask = async (req, res) => {
-    const { id } = req.params;
-
-    try {
-        const task = await Task.findByPk(id);
-        if (!task || task.userId !== req.user.id) {
-            return res.status(404).json({ error: 'Task not found' });
-        }
-
-        await task.destroy();
-        res.json({ message: 'Task deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error deleting task' });
-    }
-};
-exports.updateEmployee = async (req, res) => {
-    const { email, name, role, password } = req.body;
-  
-    try {
-      // Find employee by email
-      const employee = await Employee.findOne({ where: { email } });
-  
-      // If employee not found, return 404 error
-      if (!employee) {
-        return res.status(404).json({ error: 'Employee not found' });
-      }
-  
-      // Update employee data
-      if (password) {
-        // Hash the password if it is being updated
-        employee.password = await bcrypt.hash(password, 10);
-      }
-      employee.name = name || employee.name;
-      employee.role = role || employee.role;
-  
-      // Save updated employee record
-      await employee.save();
-  
-      // Return the updated employee data
-      res.json({
-        message: 'Employee updated successfully',
-        employee: {
-          name: employee.name,
-          email: employee.email,
-          role: employee.role,
-        },
-      });
-    } catch (error) {
-      console.error('Error updating employee:', error);
-      res.status(500).json({ error: 'Error updating employee' });
-    }
-  };
-exports.deleteEmployee = async (req, res) => {
-  const { email } = req.params;
+  const { id } = req.params;
+  const { title, description, dueDate, status, assignedTo } = req.body;
 
   try {
-    // Find employee by email
-    const employee = await Employee.findOne({ where: { email } });
-
-    // If employee not found, return 404 error
-    if (!employee) {
-      return res.status(404).json({ error: 'Employee not found' });
+    const task = await Task.findByPk(id);
+    if (!task || task.userId !== req.user.id) {
+      return res.status(404).json({ error: 'Task not found' });
     }
 
-    // Delete employee record
-    await employee.destroy();
+    // Ensure the assigned employee exists
+    if (assignedTo) {
+      const employee = await Employee.findByPk(assignedTo);
+      if (!employee) {
+        return res.status(400).json({ error: 'Assigned employee not found' });
+      }
+      task.assignedTo = assignedTo;  // Update assigned employee
+    }
 
-    // Return success message
-    res.json({ message: 'Employee deleted successfully' });
+    task.title = title || task.title;
+    task.description = description || task.description;
+    task.dueDate = dueDate || task.dueDate;
+    task.status = status || task.status;
+    await task.save();
+
+    res.json({ message: 'Task updated successfully', task });
   } catch (error) {
-    console.error('Error deleting employee:', error);
-    res.status(500).json({ error: 'Error deleting employee' });
+    res.status(500).json({ error: 'Error updating task' });
   }
 };
-  
+exports.getAllTasks = async (req, res) => {
+  try {
+    // Fetch all tasks, including the assigned employee data
+    const tasks = await Task.findAll({
+      include: [
+        {
+          model: User,  // Include the User (employee) data
+          as: 'assignee', // Alias for the assigned employee
+          attributes: ['id', 'name', 'email'],  // Specify which fields to include from User
+        },
+      ],
+    });
+
+    // Return the tasks data along with the assigned employee information
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks:', error);
+    res.status(500).json({ error: 'Error fetching tasks' });
+  }
+};
