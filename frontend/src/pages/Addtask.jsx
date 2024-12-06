@@ -9,6 +9,7 @@ import {
   Input,
 } from "reactstrap";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const AddTaskPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -25,23 +26,37 @@ const AddTaskPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
 
-  // Fetch tasks from API when component mounts
+  const fetchTasks = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Token not found. Please log in again.");
+      return;
+    }
+
+    try {
+      const response = await axios.get("http://localhost:5000/api/tasks/get", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTasks(response.data);
+    } catch (error) {
+      console.error("There was an error fetching tasks", error);
+      toast.error("Error fetching tasks. Please try again later.");
+    }
+  };
+
   useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        const response = await axios.get("/api/tasks/get");
-        setTasks(response.data);
-      } catch (error) {
-        console.error("There was an error fetching tasks", error);
-      }
-    };
     fetchTasks();
   }, []);
 
-  // Fetch employees from API
   const fetchEmployees = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/employees/getEmployee");
+      const response = await axios.get(
+        "http://localhost:5000/api/employees/getEmployee"
+      );
       setEmployees(response.data || []);
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -79,7 +94,7 @@ const AddTaskPage = () => {
     if (!formData.title.trim()) newErrors.title = "Title is required.";
     if (!formData.description.trim())
       newErrors.description = "Description is required.";
-    if (!formData.assignedTo.trim())
+    if (!formData.assignedTo)
       newErrors.assignedTo = "Assigned To is required.";
     if (!formData.dueDate.trim()) newErrors.dueDate = "Due date is required.";
     if (!formData.status.trim()) newErrors.status = "Status is required.";
@@ -91,56 +106,72 @@ const AddTaskPage = () => {
   const handleAddSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate the form before submitting
     if (!validateForm()) return;
 
-    // Get the token from localStorage
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
 
-    // If token doesn't exist, you can handle the case (e.g., show an error or redirect)
     if (!token) {
-      alert("Token not found. Please log in again.");
+      toast.error("Token not found. Please log in again.");
       return;
     }
 
     try {
-      // Include token in the request headers
       const response = await axios.post(
         "http://localhost:5000/api/tasks/add",
         formData,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // Add token to the headers
+            Authorization: `Bearer ${token}`,
           },
         }
       );
-
-      // Update tasks state with the newly added task
+      fetchTasks();
       setTasks([...tasks, response.data]);
-      alert("Task added successfully!");
+      toast.success("Task added successfully!", {
+        position: "top-right",
+        autoClose: 6000,
+      });
       toggleAddModal();
     } catch (error) {
       console.error("There was an error adding the task", error);
-      alert("Error adding task.");
+      toast.error("Error adding task. Please try again later.");
     }
   };
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast.error("Token not found. Please log in again.");
+      return;
+    }
+
     try {
       const updatedTask = await axios.put(
-        `/api/tasks/${tasks[editIndex]._id}`,
-        formData
+        `http://localhost:5000/api/tasks/update/${tasks[editIndex].id}`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
       );
       const updatedTasks = tasks.map((task, index) =>
         index === editIndex ? updatedTask.data : task
       );
       setTasks(updatedTasks);
-      alert("Task updated successfully!");
+      fetchTasks();
+      toast.success("Task updated successfully!", {
+        position: "top-right",
+        autoClose: 6000,
+      });
       toggleEditModal();
     } catch (error) {
       console.error("There was an error updating the task", error);
+      toast.error("Error updating task. Please try again later.");
     }
   };
 
@@ -151,13 +182,38 @@ const AddTaskPage = () => {
   };
 
   const handleDelete = async (index) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Token not found. Please log in again.");
+      return;
+    }
+
     try {
-      await axios.delete(`/api/tasks/${tasks[index]._id}`);
+      await axios.delete(
+        `http://localhost:5000/api/tasks/delete/${tasks[index].id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
       const updatedTasks = tasks.filter((_, i) => i !== index);
       setTasks(updatedTasks);
-      alert("Task deleted successfully!");
+
+      toast.success("Task deleted successfully!", {
+        position: "top-right",
+        autoClose: 6000,
+      });
+
+      fetchTasks();
     } catch (error) {
       console.error("There was an error deleting the task", error);
+      toast.error("Error deleting task", {
+        position: "top-right",
+        autoClose: 6000,
+      });
     }
   };
 
@@ -251,8 +307,7 @@ const AddTaskPage = () => {
                 placeholder="Enter description"
                 value={formData.description}
                 onChange={handleChange}
-                className={`form-control ${errors.description ? "is-invalid" : ""
-                  }`}
+                className={`form-control ${errors.description ? "is-invalid" : ""}`}
               />
               {errors.description && (
                 <div className="invalid-feedback">{errors.description}</div>
@@ -267,13 +322,12 @@ const AddTaskPage = () => {
                 name="assignedTo"
                 value={formData.assignedTo}
                 onChange={handleChange}
-                className={`form-control ${errors.assignedTo ? "is-invalid" : ""
-                  }`}
+                className={`form-control ${errors.assignedTo ? "is-invalid" : ""}`}
               >
-                <option value="">Select Employee</option>
-                {employees.map((employee) => (
-                  <option key={employee._id} value={employee._id}>
-                    {employee.name}
+                <option value="">Select employee</option>
+                {employees.map((emp) => (
+                  <option key={emp._id} value={emp.name}>
+                    {emp.name}
                   </option>
                 ))}
               </Input>
@@ -300,18 +354,14 @@ const AddTaskPage = () => {
               <label>
                 Status<span style={{ color: "red" }}>*</span>
               </label>
-              <Input
-                type="select"
+              <input
+                type="text"
                 name="status"
+                placeholder="Enter status"
                 value={formData.status}
                 onChange={handleChange}
                 className={`form-control ${errors.status ? "is-invalid" : ""}`}
-              >
-                <option value="">Select Status</option>
-                <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </Input>
+              />
               {errors.status && (
                 <div className="invalid-feedback">{errors.status}</div>
               )}
@@ -319,11 +369,11 @@ const AddTaskPage = () => {
           </form>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={toggleAddModal}>
-            Cancel
-          </Button>
           <Button color="primary" onClick={handleAddSubmit}>
             Add Task
+          </Button>
+          <Button color="secondary" onClick={toggleAddModal}>
+            Cancel
           </Button>
         </ModalFooter>
       </Modal>
@@ -359,8 +409,7 @@ const AddTaskPage = () => {
                 placeholder="Enter description"
                 value={formData.description}
                 onChange={handleChange}
-                className={`form-control ${errors.description ? "is-invalid" : ""
-                  }`}
+                className={`form-control ${errors.description ? "is-invalid" : ""}`}
               />
               {errors.description && (
                 <div className="invalid-feedback">{errors.description}</div>
@@ -375,13 +424,12 @@ const AddTaskPage = () => {
                 name="assignedTo"
                 value={formData.assignedTo}
                 onChange={handleChange}
-                className={`form-control ${errors.assignedTo ? "is-invalid" : ""
-                  }`}
+                className={`form-control ${errors.assignedTo ? "is-invalid" : ""}`}
               >
-                <option value="">Select Employee</option>
-                {employees.map((employee) => (
-                  <option key={employee._id} value={employee._id}>
-                    {employee.name}
+                <option value="">Select employee</option>
+                {employees.map((emp) => (
+                  <option key={emp._id} value={emp.name}>
+                    {emp.name}
                   </option>
                 ))}
               </Input>
@@ -408,18 +456,14 @@ const AddTaskPage = () => {
               <label>
                 Status<span style={{ color: "red" }}>*</span>
               </label>
-              <Input
-                type="select"
+              <input
+                type="text"
                 name="status"
+                placeholder="Enter status"
                 value={formData.status}
                 onChange={handleChange}
                 className={`form-control ${errors.status ? "is-invalid" : ""}`}
-              >
-                <option value="">Select Status</option>
-                <option value="Pending">Pending</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </Input>
+              />
               {errors.status && (
                 <div className="invalid-feedback">{errors.status}</div>
               )}
@@ -427,11 +471,11 @@ const AddTaskPage = () => {
           </form>
         </ModalBody>
         <ModalFooter>
-          <Button color="secondary" onClick={toggleEditModal}>
-            Cancel
-          </Button>
           <Button color="primary" onClick={handleEditSubmit}>
             Update Task
+          </Button>
+          <Button color="secondary" onClick={toggleEditModal}>
+            Cancel
           </Button>
         </ModalFooter>
       </Modal>
