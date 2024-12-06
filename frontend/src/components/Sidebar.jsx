@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import  { useState,React,useEffect } from 'react';
 import { Sidebar, Menu, MenuItem } from 'react-pro-sidebar';
 import { FaHome, FaUserPlus, FaTasks } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
@@ -11,28 +11,38 @@ const SidebarComponent = () => {
         if (user) {
             setUserRole(user?.role || "");
         }
-    }, []); // Empty dependency array ensures this runs only once after initial render
-
-    return (
+    }, []); 
+return (
         <Sidebar
-            style={{
-                backgroundColor: "rgba(255, 255, 255, 0.5)"
-            }}
+        style={{
+            backgroundColor: "rgba(255, 255, 255, 0.5)"
+          }}
+          
         >
-            <Menu>
-                <MenuItem icon={<FaHome />}>
-                    <Link to="/dashboard">Dashboard</Link>
+            <Menu
+               
+            >
+                <MenuItem
+                    icon={<FaHome />}
+                    component={<Link to="/dashboard" />}
+                >
+                    Dashboard
                 </MenuItem>
                 {userRole === "admin" && (
                     <>
-                        <MenuItem icon={<FaUserPlus />}>
-                            <Link to="/addemployee">Add Employee</Link>
-                        </MenuItem>
-
+                <MenuItem
+                    icon={<FaUserPlus />}
+                    component={<Link to="/addemployee" />}
+                >
+                    Add Employee
+                </MenuItem>
                     </>
                 )}
-                <MenuItem icon={<FaTasks />}>
-                    <Link to="/addtask">Add Task</Link>
+                <MenuItem
+                    icon={<FaTasks />}
+                    component={<Link to="/addtask" />}
+                >
+                    Add Task
                 </MenuItem>
             </Menu>
         </Sidebar>
