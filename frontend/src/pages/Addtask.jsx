@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from "react";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  Table,
-  Button,
-  Input,
-} from "reactstrap";
+import { Modal, ModalHeader, ModalBody, ModalFooter, Table, Button, Input, Badge } from "reactstrap";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { FaPlusCircle, FaTimesCircle } from "react-icons/fa";
+import { IoMdCreate, IoMdTrash } from "react-icons/io";
 
 const AddTaskPage = () => {
   const [tasks, setTasks] = useState([]);
@@ -25,63 +19,55 @@ const AddTaskPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
+  const [userRole, setUserRole] = useState("");
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState("");
+  const [currentTaskId, setCurrentTaskId] = useState(null);
+  const [userId, setUserId] = useState(localStorage.getItem("userId") || null);
 
-  const fetchTasks = async () => {
+  const fetchData = async () => {
     const token = localStorage.getItem("token");
+    if (!token) return toast.error("Token not found. Please log in again.");
 
-    if (!token) {
-      toast.error("Token not found. Please log in again.");
+    if (!userId) {
+      toast.error("User ID is missing. Please log in again.");
       return;
     }
 
     try {
-      const response = await axios.get("http://localhost:5000/api/tasks/get", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const url = userRole === 'admin'
+        ? 'http://localhost:5000/api/tasks/get'
+        : `http://localhost:5000/api/tasks/assigned/${userId}`;
 
-      setTasks(response.data);
+      const tasksResponse = await axios.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      setTasks(tasksResponse.data);
+
+      const employeesResponse = await axios.get("http://localhost:5000/api/employees/getEmployee");
+      setEmployees(employeesResponse.data || []);
     } catch (error) {
-      console.error("There was an error fetching tasks", error);
-      toast.error("Error fetching tasks. Please try again later.");
+      console.error("Error fetching data", error);
+      toast.error("Error fetching data. Please try again later.");
     }
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  const fetchEmployees = async () => {
-    try {
-      const response = await axios.get(
-        "http://localhost:5000/api/employees/getEmployee"
-      );
-      setEmployees(response.data || []);
-    } catch (error) {
-      console.error("Error fetching employees:", error);
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (user) {
+      setUserId(user?.id || "");
+      setUserRole(user?.role || "");
+      fetchData();
+    } else {
+      toast.error("User data not found. Please log in again.");
     }
-  };
-
-  useEffect(() => {
-    fetchEmployees();
   }, []);
 
-  const toggleAddModal = () => {
-    setFormData({
-      title: "",
-      description: "",
-      assignedTo: "",
-      dueDate: "",
-      status: "",
-    });
-    setErrors({});
-    setIsAddModalOpen(!isAddModalOpen);
-  };
-
-  const toggleEditModal = () => {
-    setErrors({});
-    setIsEditModalOpen(!isEditModalOpen);
+  const toggleModal = (modalType) => {
+    if (modalType === 'add') {
+      setFormData({ title: "", description: "", assignedTo: "", dueDate: "", status: "" });
+      setErrors({});
+    }
+    if (modalType === 'edit') setErrors({});
+    modalType === 'add' ? setIsAddModalOpen(!isAddModalOpen) : setIsEditModalOpen(!isEditModalOpen);
   };
 
   const handleChange = (e) => {
@@ -92,128 +78,61 @@ const AddTaskPage = () => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.title.trim()) newErrors.title = "Title is required.";
-    if (!formData.description.trim())
-      newErrors.description = "Description is required.";
-    if (!formData.assignedTo)
-      newErrors.assignedTo = "Assigned To is required.";
+    if (!formData.description.trim()) newErrors.description = "Description is required.";
+    if (!formData.assignedTo) newErrors.assignedTo = "Assigned To is required.";
     if (!formData.dueDate.trim()) newErrors.dueDate = "Due date is required.";
     if (!formData.status.trim()) newErrors.status = "Status is required.";
     setErrors(newErrors);
-
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleAddSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) return;
-
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      toast.error("Token not found. Please log in again.");
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        "http://localhost:5000/api/tasks/add",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      fetchTasks();
-      setTasks([...tasks, response.data]);
-      toast.success("Task added successfully!", {
-        position: "top-right",
-        autoClose: 6000,
-      });
-      toggleAddModal();
-    } catch (error) {
-      console.error("There was an error adding the task", error);
-      toast.error("Error adding task. Please try again later.");
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
+  const handleSubmit = async (e, type) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     const token = localStorage.getItem("token");
+    if (!token) return toast.error("Token not found. Please log in again.");
 
-    if (!token) {
-      toast.error("Token not found. Please log in again.");
-      return;
-    }
+    const url = type === 'add'
+      ? "http://localhost:5000/api/tasks/add"
+      : `http://localhost:5000/api/tasks/update/${tasks[editIndex].id}`;
 
     try {
-      const updatedTask = await axios.put(
-        `http://localhost:5000/api/tasks/update/${tasks[editIndex].id}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      const updatedTasks = tasks.map((task, index) =>
-        index === editIndex ? updatedTask.data : task
-      );
-      setTasks(updatedTasks);
-      fetchTasks();
-      toast.success("Task updated successfully!", {
-        position: "top-right",
-        autoClose: 6000,
-      });
-      toggleEditModal();
-    } catch (error) {
-      console.error("There was an error updating the task", error);
-      toast.error("Error updating task. Please try again later.");
-    }
-  };
+      const method = type === 'add' ? 'post' : 'put';
+      const response = await axios[method](url, formData, { headers: { Authorization: `Bearer ${token}` } });
 
-  const handleEdit = (index) => {
-    setEditIndex(index);
-    setFormData(tasks[index]);
-    toggleEditModal();
+      setTasks(type === 'add' ? [...tasks, response.data] : tasks.map((task, index) => (index === editIndex ? response.data : task)));
+      toast.success(`${type === 'add' ? 'Added' : 'Updated'} task successfully!`);
+      fetchData();
+      toggleModal(type === 'add' ? 'add' : 'edit');
+    } catch (error) {
+      toast.error(`${type === 'add' ? 'Error adding' : 'Error updating'} task.`);
+    }
   };
 
   const handleDelete = async (index) => {
     const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token not found. Please log in again.");
-      return;
-    }
+    if (!token) return toast.error("Token not found. Please log in again.");
 
     try {
-      await axios.delete(
-        `http://localhost:5000/api/tasks/delete/${tasks[index].id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const updatedTasks = tasks.filter((_, i) => i !== index);
-      setTasks(updatedTasks);
-
-      toast.success("Task deleted successfully!", {
-        position: "top-right",
-        autoClose: 6000,
-      });
-
-      fetchTasks();
+      await axios.delete(`http://localhost:5000/api/tasks/delete/${tasks[index].id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setTasks(tasks.filter((_, i) => i !== index));
+      toast.success("Task deleted successfully!");
+      fetchData();
     } catch (error) {
-      console.error("There was an error deleting the task", error);
-      toast.error("Error deleting task", {
-        position: "top-right",
-        autoClose: 6000,
-      });
+      toast.error("Error deleting task.");
+    }
+  };
+
+  const handleStatusUpdate = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      await axios.put(`http://localhost:5000/api/tasks/status/${currentTaskId}`, { status: selectedStatus }, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success("Status updated successfully");
+      fetchData();
+      setIsStatusModalOpen(false);
+    } catch (error) {
+      toast.error("Error updating status");
     }
   };
 
@@ -221,10 +140,9 @@ const AddTaskPage = () => {
     <div className="container mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Task Management</h1>
-        <Button color="primary" onClick={toggleAddModal}>
-          Add Task
-        </Button>
+        {userRole === "admin" && <Button color="success" onClick={() => toggleModal('add')}>Add Task</Button>}
       </div>
+
       <Table striped>
         <thead>
           <tr>
@@ -240,243 +158,112 @@ const AddTaskPage = () => {
         <tbody>
           {tasks.length > 0 ? (
             tasks.map((task, index) => (
-              <tr key={task._id}>
+              <tr key={task.id}>
                 <th scope="row">{index + 1}</th>
                 <td>{task.title}</td>
                 <td>{task.description}</td>
                 <td>{task.assignedTo}</td>
                 <td>{task.dueDate}</td>
-                <td>{task.status}</td>
+                <td><Badge color={task.status === 'pending' ? 'success' : 'warning'}>{task.status}</Badge></td>
                 <td>
-                  <Button
-                    color="warning"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => handleEdit(index)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    color="danger"
-                    size="sm"
-                    onClick={() => handleDelete(index)}
-                  >
-                    Delete
-                  </Button>
+                  {userRole === "admin" ? (
+                    <>
+                      <IoMdCreate title="Edit Task" style={{ marginRight: '10px', cursor: 'pointer' }} onClick={() => { setEditIndex(index); setFormData(task); toggleModal('edit'); }} />
+                      <IoMdTrash title="Delete Task" style={{ cursor: 'pointer' }} onClick={() => handleDelete(index)} />
+                    </>
+                  ) : (
+                    <IoMdCreate title="Update Status" style={{ cursor: "pointer", marginRight: "10px" }} onClick={() => { setCurrentTaskId(task.id); setIsStatusModalOpen(true); }} />
+                  )}
                 </td>
               </tr>
             ))
           ) : (
-            <tr>
-              <td colSpan="7" className="text-center">
-                No tasks added yet.
-              </td>
-            </tr>
+            <tr><td colSpan="7" className="text-center">No tasks added yet.</td></tr>
           )}
         </tbody>
       </Table>
 
       {/* Add Modal */}
-      <Modal isOpen={isAddModalOpen} toggle={toggleAddModal}>
-        <ModalHeader toggle={toggleAddModal}>Add Task</ModalHeader>
+      <Modal isOpen={isAddModalOpen} toggle={() => toggleModal('add')}>
+        <ModalHeader toggle={() => toggleModal('add')}>Add Task</ModalHeader>
         <ModalBody>
           <form>
-            <div className="form-group">
-              <label>
-                Title<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                placeholder="Enter title"
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className={`form-control ${errors.title ? "is-invalid" : ""}`}
-              />
-              {errors.title && (
-                <div className="invalid-feedback">{errors.title}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Description<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="text"
-                name="description"
-                placeholder="Enter description"
-                value={formData.description}
-                onChange={handleChange}
-                className={`form-control ${errors.description ? "is-invalid" : ""}`}
-              />
-              {errors.description && (
-                <div className="invalid-feedback">{errors.description}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Assigned To<span style={{ color: "red" }}>*</span>
-              </label>
-              <Input
-                type="select"
-                name="assignedTo"
-                value={formData.assignedTo}
-                onChange={handleChange}
-                className={`form-control ${errors.assignedTo ? "is-invalid" : ""}`}
-              >
-                <option value="">Select employee</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp.name}>
-                    {emp.name}
-                  </option>
-                ))}
-              </Input>
-              {errors.assignedTo && (
-                <div className="invalid-feedback">{errors.assignedTo}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Due Date<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleChange}
-                className={`form-control ${errors.dueDate ? "is-invalid" : ""}`}
-              />
-              {errors.dueDate && (
-                <div className="invalid-feedback">{errors.dueDate}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Status<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="text"
-                name="status"
-                placeholder="Enter status"
-                value={formData.status}
-                onChange={handleChange}
-                className={`form-control ${errors.status ? "is-invalid" : ""}`}
-              />
-              {errors.status && (
-                <div className="invalid-feedback">{errors.status}</div>
-              )}
-            </div>
+            {['title', 'description', 'assignedTo', 'dueDate', 'status'].map((field, idx) => (
+              <div className="form-group" key={idx}>
+                <label>{`${field.charAt(0).toUpperCase() + field.slice(1)}`}</label>
+                <Input
+                  type={field === 'dueDate' ? 'date' : field === 'status' ? 'select' : 'text'}
+                  name={field}
+                  value={formData[field]}
+                  onChange={handleChange}
+                  invalid={!!errors[field]}
+                >
+                  {field === 'status' && (
+                    <>
+                      <option value="">Select Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                    </>
+                  )}
+                </Input>
+                {errors[field] && <div className="text-danger">{errors[field]}</div>}
+              </div>
+            ))}
           </form>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={handleAddSubmit}>
-            Add Task
-          </Button>
-          <Button color="secondary" onClick={toggleAddModal}>
-            Cancel
-          </Button>
+          <Button color="primary" onClick={(e) => handleSubmit(e, 'add')}>Add Task</Button>{' '}
+          <Button color="secondary" onClick={() => toggleModal('add')}>Cancel</Button>
         </ModalFooter>
       </Modal>
 
       {/* Edit Modal */}
-      <Modal isOpen={isEditModalOpen} toggle={toggleEditModal}>
-        <ModalHeader toggle={toggleEditModal}>Edit Task</ModalHeader>
+      <Modal isOpen={isEditModalOpen} toggle={() => toggleModal('edit')}>
+        <ModalHeader toggle={() => toggleModal('edit')}>Edit Task</ModalHeader>
         <ModalBody>
           <form>
-            <div className="form-group">
-              <label>
-                Title<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                placeholder="Enter title"
-                type="text"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className={`form-control ${errors.title ? "is-invalid" : ""}`}
-              />
-              {errors.title && (
-                <div className="invalid-feedback">{errors.title}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Description<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="text"
-                name="description"
-                placeholder="Enter description"
-                value={formData.description}
-                onChange={handleChange}
-                className={`form-control ${errors.description ? "is-invalid" : ""}`}
-              />
-              {errors.description && (
-                <div className="invalid-feedback">{errors.description}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Assigned To<span style={{ color: "red" }}>*</span>
-              </label>
-              <Input
-                type="select"
-                name="assignedTo"
-                value={formData.assignedTo}
-                onChange={handleChange}
-                className={`form-control ${errors.assignedTo ? "is-invalid" : ""}`}
-              >
-                <option value="">Select employee</option>
-                {employees.map((emp) => (
-                  <option key={emp._id} value={emp.name}>
-                    {emp.name}
-                  </option>
-                ))}
-              </Input>
-              {errors.assignedTo && (
-                <div className="invalid-feedback">{errors.assignedTo}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Due Date<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="date"
-                name="dueDate"
-                value={formData.dueDate}
-                onChange={handleChange}
-                className={`form-control ${errors.dueDate ? "is-invalid" : ""}`}
-              />
-              {errors.dueDate && (
-                <div className="invalid-feedback">{errors.dueDate}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label>
-                Status<span style={{ color: "red" }}>*</span>
-              </label>
-              <input
-                type="text"
-                name="status"
-                placeholder="Enter status"
-                value={formData.status}
-                onChange={handleChange}
-                className={`form-control ${errors.status ? "is-invalid" : ""}`}
-              />
-              {errors.status && (
-                <div className="invalid-feedback">{errors.status}</div>
-              )}
-            </div>
+            {['title', 'description', 'assignedTo', 'dueDate', 'status'].map((field, idx) => (
+              <div className="form-group" key={idx}>
+                <label>{`${field.charAt(0).toUpperCase() + field.slice(1)}`}</label>
+                <Input
+                  type={field === 'dueDate' ? 'date' : field === 'status' ? 'select' : 'text'}
+                  name={field}
+                  value={formData[field]}
+                  onChange={handleChange}
+                  invalid={!!errors[field]}
+                >
+                  {field === 'status' && (
+                    <>
+                      <option value="">Select Status</option>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                    </>
+                  )}
+                </Input>
+                {errors[field] && <div className="text-danger">{errors[field]}</div>}
+              </div>
+            ))}
           </form>
         </ModalBody>
         <ModalFooter>
-          <Button color="primary" onClick={handleEditSubmit}>
-            Update Task
-          </Button>
-          <Button color="secondary" onClick={toggleEditModal}>
-            Cancel
-          </Button>
+          <Button color="primary" onClick={(e) => handleSubmit(e, 'edit')}>Save Changes</Button>{' '}
+          <Button color="secondary" onClick={() => toggleModal('edit')}>Cancel</Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Status Modal */}
+      <Modal isOpen={isStatusModalOpen} toggle={() => setIsStatusModalOpen(false)}>
+        <ModalHeader toggle={() => setIsStatusModalOpen(false)}>Update Task Status</ModalHeader>
+        <ModalBody>
+          <select onChange={(e) => setSelectedStatus(e.target.value)} value={selectedStatus}>
+            <option value="">Select Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </ModalBody>
+        <ModalFooter>
+          <Button color="primary" onClick={handleStatusUpdate}>Update Status</Button>{' '}
+          <Button color="secondary" onClick={() => setIsStatusModalOpen(false)}>Cancel</Button>
         </ModalFooter>
       </Modal>
     </div>

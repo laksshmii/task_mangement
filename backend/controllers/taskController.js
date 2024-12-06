@@ -93,3 +93,56 @@ exports.deleteTask = async (req, res) => {
     res.status(500).json({ error: 'Error deleting task' });
   }
 };
+exports.updateTaskStatus = async (req, res) => {
+  const { id } = req.params; // Task ID
+  const { status } = req.body; // New status
+
+  try {
+    // Validate the status field
+    if (!status) {
+      return res.status(400).json({ error: 'Status is required' });
+    }
+
+    // Find the task by ID
+    const task = await Task.findByPk(id);
+
+    if (!task) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    // Update the status field
+    task.status = status;
+    await task.save();
+
+    res.json({ message: 'Task status updated successfully', task });
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    res.status(500).json({ error: 'Error updating task status', details: error.message });
+  }
+};
+exports.getTasksByAssignedTo = async (req, res) => {
+  const { assignedTo } = req.params; // Employee ID
+
+  try {
+    // Validate the assignedTo parameter
+    if (!assignedTo) {
+      return res.status(400).json({ error: 'AssignedTo parameter is required' });
+    }
+
+    // Find tasks assigned to the specified employee
+    const tasks = await Task.findAll({
+      where: { assignedTo },
+    });
+
+    // Check if any tasks are found
+    if (tasks.length === 0) {
+      return res.status(404).json({ error: 'No tasks found for the specified employee' });
+    }
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Error fetching tasks by assignedTo:', error);
+    res.status(500).json({ error: 'Error fetching tasks', details: error.message });
+  }
+};
+

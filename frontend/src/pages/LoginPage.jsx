@@ -62,6 +62,8 @@ const LoginPage = () => {
           });
           localStorage.setItem('isAuthenticated', 'true');
           localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          localStorage.setItem('userId', JSON.stringify(response.data.user.id));
           window.location.href = '/dashboard'; // Redirect after successful login
         } else {
           toast.error('Login failed. Please check your credentials.', {
