@@ -19,7 +19,7 @@ const AddTaskPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
-  const [userRole, setUserRole] = useState("");
+  const [userRole, setUserRole] = useState(localStorage.getItem("role") || "");
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [currentTaskId, setCurrentTaskId] = useState(null);
@@ -33,9 +33,14 @@ const AddTaskPage = () => {
       toast.error("User ID is missing. Please log in again.");
       return;
     }
+    const cleanedUserRole = userRole.trim(); // This will remove any leading or trailing spaces
 
+    console.log('Cleaned User role:', cleanedUserRole); // Check the cleaned value
+    console.log('Is user role admin?', cleanedUserRole === 'admin');
     try {
-      const url = userRole === 'admin'
+      console.log('User role:', userRole); // Ensure the value is exactly 'admin'
+  console.log('Is user role admin?', userRole === 'admin');
+       const url = userRole.trim() === 'admin'
         ? 'http://localhost:5000/api/tasks/get'
         : `http://localhost:5000/api/tasks/assigned/${userId}`;
 
@@ -191,21 +196,26 @@ const AddTaskPage = () => {
             {['title', 'description', 'assignedTo', 'dueDate', 'status'].map((field, idx) => (
               <div className="form-group" key={idx}>
                 <label>{`${field.charAt(0).toUpperCase() + field.slice(1)}`}</label>
-                <Input
-                  type={field === 'dueDate' ? 'date' : field === 'status' ? 'select' : 'text'}
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  invalid={!!errors[field]}
-                >
-                  {field === 'status' && (
-                    <>
-                      <option value="">Select Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                    </>
-                  )}
-                </Input>
+                {field === 'status' ? (
+                  <select
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    className={`form-control ${errors[field] ? 'is-invalid' : ''}`}
+                  >
+                    <option value="">Select Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                ) : (
+                  <Input
+                    type={field === 'dueDate' ? 'date' : 'text'}
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    invalid={!!errors[field]}
+                  />
+                )}
                 {errors[field] && <div className="text-danger">{errors[field]}</div>}
               </div>
             ))}
@@ -225,21 +235,26 @@ const AddTaskPage = () => {
             {['title', 'description', 'assignedTo', 'dueDate', 'status'].map((field, idx) => (
               <div className="form-group" key={idx}>
                 <label>{`${field.charAt(0).toUpperCase() + field.slice(1)}`}</label>
-                <Input
-                  type={field === 'dueDate' ? 'date' : field === 'status' ? 'select' : 'text'}
-                  name={field}
-                  value={formData[field]}
-                  onChange={handleChange}
-                  invalid={!!errors[field]}
-                >
-                  {field === 'status' && (
-                    <>
-                      <option value="">Select Status</option>
-                      <option value="pending">Pending</option>
-                      <option value="completed">Completed</option>
-                    </>
-                  )}
-                </Input>
+                {field === 'status' ? (
+                  <select
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    className={`form-control ${errors[field] ? 'is-invalid' : ''}`}
+                  >
+                    <option value="">Select Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                ) : (
+                  <Input
+                    type={field === 'dueDate' ? 'date' : 'text'}
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    invalid={!!errors[field]}
+                  />
+                )}
                 {errors[field] && <div className="text-danger">{errors[field]}</div>}
               </div>
             ))}
@@ -255,7 +270,7 @@ const AddTaskPage = () => {
       <Modal isOpen={isStatusModalOpen} toggle={() => setIsStatusModalOpen(false)}>
         <ModalHeader toggle={() => setIsStatusModalOpen(false)}>Update Task Status</ModalHeader>
         <ModalBody>
-          <select  className="form-select" onChange={(e) => setSelectedStatus(e.target.value)} value={selectedStatus}>
+          <select className="form-select" onChange={(e) => setSelectedStatus(e.target.value)} value={selectedStatus}>
             <option value="">Select Status</option>
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
